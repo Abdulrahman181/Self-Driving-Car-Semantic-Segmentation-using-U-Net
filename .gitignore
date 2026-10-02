@@ -6,3 +6,7 @@ __pycache__/
 data/
 cityscapes/
 .env
+*.keras
+*.tflite
+cityscapes_demo.avi
+.ipynb_checkpoints/
