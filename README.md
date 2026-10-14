@@ -1,121 +1,83 @@
-# Semantic Segmentation using U-Net on Cityscapes Dataset
+# Self-Driving Car Semantic Segmentation with U-Net
 
-## 📌 Project Overview
+This repository contains a TensorFlow/Keras U-Net experiment for semantic segmentation of urban driving scenes and a Streamlit inference app. The training notebook is designed for the **Cityscapes image-pairs** layout; the dataset and trained model are intentionally not committed.
 
-This project implements a **Semantic Segmentation pipeline** using a **U-Net architecture** trained on the **Cityscapes dataset**.
-The goal is to perform **pixel-wise classification** of urban street scenes, accurately segmenting objects such as roads, buildings, vehicles, pedestrians, and other city elements.
+## Repository status
 
-The project follows a **clean, production-style workflow**, including data preprocessing, model training, evaluation using appropriate segmentation metrics, and qualitative visualization of predictions.
+- Training and evaluation live in `autonomous-driving-scene-segmentation.ipynb`.
+- `stream_segmentation.py` serves an existing `.keras` model; it does not train a model.
+- `Data` is only a historical placeholder. It is not a dataset.
+- No trustworthy benchmark metric is committed. Run training/evaluation with the dataset before reporting metrics.
 
----
+## Data and model prerequisites
 
-## 🗂️ Dataset
+The notebook requires a local directory containing these non-empty directories:
 
-* **Dataset**: Cityscapes
-* **Type**: Urban street scene semantic segmentation
-* **Input**: RGB images
-* **Output**: Pixel-wise class masks
-* **Number of Classes**: 8 semantic classes
-
-> ⚠️ Due to licensing restrictions, the dataset is **not included** in this repository.
-
-Official dataset:
-  [https://www.cityscapes-dataset.com/](https://www.cityscapes-dataset.com/)
-
----
-
-## 🧠 Model Architecture
-
-* **Model**: U-Net
-* **Encoder–Decoder structure**
-* **Skip connections** for spatial feature preservation
-* **Output activation**: Softmax
-* **Loss function**: Sparse Categorical Crossentropy
-
-📌 The architecture is optimized for **pixel-level accuracy and boundary preservation**.
-
----
-
-## 📊 Evaluation Metrics
-
-> ⚠️ Accuracy alone is **not sufficient** for semantic segmentation due to background dominance.
-
-The model is evaluated using:
-
-* **Mean Intersection over Union (mIoU)**
-* **Per-Class IoU**
-* **Dice Coefficient**
-* **Validation Loss**
-
-These metrics provide a more reliable assessment of segmentation quality, especially for **small objects and object boundaries**.
-
----
-
-## 📈 Results
-
-* **Validation Accuracy**: ~87%
-* **Stable convergence with decreasing validation loss**
-* **Clear qualitative improvements in object boundaries**
-* **Strong generalization across validation samples**
-
-📌 Sample results are provided in the `results/` directory.
-
----
-
-## ▶️ How to Run
-
-### 1️⃣ Install dependencies
-
-```bash
-pip install -r requirements.txt
+```text
+<CITYSCAPES_DATA_ROOT>/train/*.jpg
+<CITYSCAPES_DATA_ROOT>/val/*.jpg
 ```
 
-### 2️⃣ Prepare dataset
+Each image pair is expected to contain an RGB input image followed by an RGB color mask of equal width. The notebook validates that the directories exist, are non-empty, have readable images, and have no filename overlap between train and validation. It never deletes files from the dataset.
 
-Download Cityscapes and place it according to the expected directory structure inside `dataset.py`.
-
-### 3️⃣ Train the model
+Cityscapes is licensed data. Obtain it from the [official Cityscapes website](https://www.cityscapes-dataset.com/) or from a permitted image-pairs export, and follow its license terms. Set the path explicitly:
 
 ```bash
-python src/train.py
+export CITYSCAPES_DATA_ROOT=/absolute/path/to/cityscapes_data
 ```
 
-### 4️⃣ Evaluate the model
+The Streamlit app requires a trained model artifact:
 
 ```bash
-python src/evaluate.py
+export CITYSCAPES_MODEL=/absolute/path/to/cityscapes_unet_model.keras
 ```
 
-### 5️⃣ Run inference
+If this variable is unset, the app looks for `cityscapes_unet_model.keras` in the repository root and stops with an actionable error if it is absent. No model is included in this repository.
+
+## Installation
+
+Use Python 3.10 or 3.11 in a virtual environment. TensorFlow is a large dependency and may require platform-specific installation choices.
 
 ```bash
-python src/predict.py
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt  # optional static checks/tests
 ```
 
----
+## Validation before training
 
-## 🧪 Key Highlights
+These checks do not require TensorFlow or the dataset:
 
-✔️ End-to-end segmentation pipeline
-✔️ Clean and modular code structure
-✔️ Proper evaluation metrics (IoU & Dice)
-✔️ Visualization of predictions
-✔️ Production-ready workflow
+```bash
+python validate_project.py
+ruff check stream_segmentation.py validate_project.py tests
+python -m unittest discover -s tests -v
+```
 
----
+## Training and evaluation
 
-## 🚀 Future Improvements
+Open the notebook after setting `CITYSCAPES_DATA_ROOT` and run it from the first cell. The notebook sets deterministic seeds, uses the supplied train/validation split without creating a new overlapping split, and computes pixel accuracy, loss, per-class IoU, mean IoU over classes present in the evaluated set, and per-class/mean Dice from a confusion matrix. These metrics are only produced after a real run; this repository does not claim precomputed results.
 
-* Add **data augmentation** for better generalization
-* Experiment with **pretrained encoders (EfficientNet, ResNet)**
-* Implement **Focal Loss** to handle class imbalance
-* Optimize inference speed for deployment
+The notebook writes model and demo artifacts under `ARTIFACT_DIR` (default: `artifacts/`):
 
----
+```bash
+export ARTIFACT_DIR=/absolute/path/to/output-directory
+```
 
-## 👤 Author
+A missing dataset is a hard error with the expected path. A missing model is a hard error in the app. Do not create placeholder data or metrics to bypass either check.
 
-**Abdulrahman Ahmed**
-Machine Learning / Computer Vision Engineer
+## Streamlit inference
 
-📌 Feel free to connect or review the project!
+```bash
+streamlit run stream_segmentation.py
+```
+
+Upload an image or a video after configuring `CITYSCAPES_MODEL`. The app checks the model output shape and class count before rendering predictions. Camera mode processes one frame per Streamlit run rather than entering an uninterruptible Python loop.
+
+## Limitations and audit notes
+
+- The notebook uses the dataset's existing train/validation directories; it cannot establish that the upstream split is scene-disjoint beyond checking filename overlap.
+- The eight-class color grouping is a project-specific mapping, not the full official Cityscapes 30/19-class taxonomy. Confirm the mask encoding before training.
+- No end-to-end training, GPU run, or metric reproduction was possible during repository validation because the dataset and model artifact are not present in the repository and TensorFlow is not assumed to be installed.
