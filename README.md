@@ -6,6 +6,7 @@ This repository contains a TensorFlow/Keras U-Net experiment for semantic segmen
 
 - Training and evaluation live in `autonomous-driving-scene-segmentation.ipynb`.
 - `stream_segmentation.py` serves an existing `.keras` model; it does not train a model.
+- `segmentation_utils.py` contains dependency-light inference contracts used by the UI and tests.
 - `Data` is only a historical placeholder. It is not a dataset.
 - No trustworthy benchmark metric is committed. Run training/evaluation with the dataset before reporting metrics.
 
@@ -18,7 +19,7 @@ The notebook requires a local directory containing these non-empty directories:
 <CITYSCAPES_DATA_ROOT>/val/*.jpg
 ```
 
-Each image pair is expected to contain an RGB input image followed by an RGB color mask of equal width. The notebook validates that the directories exist, are non-empty, have readable images, and have no filename overlap between train and validation. It never deletes files from the dataset.
+Each image pair is expected to be one PNG/JPEG file containing an RGB input image immediately followed by an RGB color mask of equal width. The total image width must therefore be even. The notebook validates that the directories exist, are non-empty, have readable three-channel pair files, reject unsupported mask colors, and have no filename overlap between train and validation. It never deletes files from the dataset.
 
 Cityscapes is licensed data. Obtain it from the [official Cityscapes website](https://www.cityscapes-dataset.com/) or from a permitted image-pairs export, and follow its license terms. Set the path explicitly:
 
@@ -26,7 +27,7 @@ Cityscapes is licensed data. Obtain it from the [official Cityscapes website](ht
 export CITYSCAPES_DATA_ROOT=/absolute/path/to/cityscapes_data
 ```
 
-The Streamlit app requires a trained model artifact:
+The Streamlit app requires a trained model artifact. The artifact must expose one image input shaped `[batch, height, width, 3]` and one segmentation output shaped `[batch, height, width, 8]` (height/width may be dynamic):
 
 ```bash
 export CITYSCAPES_MODEL=/absolute/path/to/cityscapes_unet_model.keras
@@ -74,7 +75,7 @@ A missing dataset is a hard error with the expected path. A missing model is a h
 streamlit run stream_segmentation.py
 ```
 
-Upload an image or a video after configuring `CITYSCAPES_MODEL`. The app checks the model output shape and class count before rendering predictions. Camera mode processes one frame per Streamlit run rather than entering an uninterruptible Python loop.
+Upload an image or a video after configuring `CITYSCAPES_MODEL`. The app checks model input/output shape and class count before rendering predictions, normalizes logits when necessary, validates output spatial dimensions, and refuses invalid class masks rather than reporting misleading coverage percentages. Camera mode processes one frame per Streamlit run rather than entering an uninterruptible Python loop.
 
 ## Limitations and audit notes
 

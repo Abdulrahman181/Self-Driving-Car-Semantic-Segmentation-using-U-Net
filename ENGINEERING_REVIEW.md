@@ -44,3 +44,30 @@ The final validation is **static only**. TensorFlow training, model loading, vid
 - The project uses an eight-class, project-specific RGB grouping rather than the complete official Cityscapes taxonomy. The mask encoding must be verified against the supplied image-pairs export before interpreting results.
 - Filename-overlap checking catches direct duplicate names only; scene-level leakage requires upstream sequence/scene metadata.
 - A real run should archive the exact dependency environment, dataset version, seed/configuration, checkpoint, confusion matrix, and validation outputs before making performance claims.
+
+## Second Senior Review
+
+### Scope and outcome
+
+The second review re-audited every tracked file, the full notebook JSON/code-cell state, Python/config/test/README/requirements content, repository history and working-tree diff. No dataset, trained model, generated media, or trustworthy metric artifact is present, so this review remains static/contract-level; it does not claim an end-to-end training or inference run.
+
+### Defects fixed
+
+- Added `segmentation_utils.py`, a dependency-light contract layer for model input/output shapes, logits-to-probability normalization, finite/range-checked class masks, and coverage accounting.
+- Refactored `stream_segmentation.py` behind a guarded `main()` entry point. Model input/output shape and single-output contracts are now checked, logits are normalized before confidence is reported, spatial output mismatches fail clearly, invalid class masks cannot produce misleading coverage percentages, and injected models make pure inference paths testable without relying on a hidden global.
+- Fixed the notebook's PNG/JPEG mismatch (`decode_jpeg` previously contradicted the documented `.png` support), validated three-channel/even-width image-pair inputs, rejected unsupported mask colors instead of silently converting them to background, and made prediction visualization safe for validation batches smaller than three.
+- Expanded `validate_project.py` to parse every repository Python file, validate required runtime dependency names, enforce clean notebook state, check destructive/path patterns, and verify key data/entry-point contracts.
+- Added `tests/test_contracts.py` for model shape, probability normalization, class-mask range, and coverage invariants. No outputs or execution counts were reintroduced into the notebook.
+
+### Second-review validation
+
+The following checks are static or dependency-light and do not constitute a real model run:
+
+```text
+python3 validate_project.py
+python3 -m unittest discover -s tests -v
+python3 -m compileall -q stream_segmentation.py segmentation_utils.py validate_project.py tests
+ruff check stream_segmentation.py segmentation_utils.py validate_project.py tests
+```
+
+TensorFlow/OpenCV execution, dataset schema validation against real files, checkpoint loading, video decoding, TFLite conversion, and metric reproduction remain intentionally unexecuted because the required artifacts/dependencies are not bundled.
